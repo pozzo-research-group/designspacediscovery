@@ -1,0 +1,10 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "designspacediscovery"
+version = "0.0.1"
+authors = [{name="Brenden Pelkie", email="bgpelkie@uw.edu"}]
+description = "Tools for running cheminformatics materials discovery campaigns to find new materials for a given application"
+requires-python = ">3.7"
