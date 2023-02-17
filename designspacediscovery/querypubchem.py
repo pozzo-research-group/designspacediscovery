@@ -7,16 +7,6 @@ import time
 Functions for querying the pubchem pugrest API. 
 """
 
-# handle similarity search, property retrieval here
-
-# given a URL, query pubchem with it
-
-# manage rate of requests somewhere - should that be here?
-# exponential backoff
-# decent error handling
-
-# pubchem rate limit: 5 requests/s
-
 class pubchemQuery():
     """
     Handles requests to the pubchem PugRest API for use cases in this package. Manage rate limits, timeouts, the like
@@ -61,11 +51,10 @@ class pubchemQuery():
             self.__check_rate_status__()
             try:
                 response = self.__execute_query__(URL)
+                self.__parse_pubchem_header__(response)
             except:
                 # if the query wrapper has failed, its a lost cause
                 response = "FAILED"
-            # get headers for status, and update values
-            self.__parse_pubchem_header__(response)
             response_dict[key] = response
         return response_dict
 
