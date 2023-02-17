@@ -108,7 +108,7 @@ class pubchemQuery():
         """
         Make sure per minute rate limit not exceeded
         """
-        rate = self.request_count_minutes/(time.time() - self.last_minute_check)
+        rate = (self.request_count_minutes/(time.time() - self.last_minute_check))*60
         self.request_count_minutes = 0
         return rate < self.rate_limit_minutes
 
