@@ -3,6 +3,8 @@ import requests
 import backoff
 import re
 import time
+from tqdm import tqdm
+
 """
 Functions for querying the pubchem pugrest API. 
 """
@@ -45,7 +47,8 @@ class pubchemQuery():
         assert isinstance(list(URLs.values())[0], str), 'URL in URLs dictionary must be a string'
 
         response_dict = {}
-        for key in list(URLs.keys()):
+        print('Querying Pubchem')
+        for key in tqdm(list(URLs.keys())):
             URL = URLs[key]
             # make sure we are good on pubchem rate limits
             self.__check_rate_status__()
