@@ -40,7 +40,7 @@ class pubchemQuery():
         Returns:
         --------
 
-        responses: dict of {key:requests.Response objects}
+        responses: dict of {key:requests.Response objects or 'FAILED' if issue with request}
         """
 
         assert isinstance(URLs, dict), 'This function takes a dictionary of URLS as input'
