@@ -46,14 +46,14 @@ def test_get_molecule_properties_validurlcall_parseresponse(
     correct_url_0 = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/445639/property/MolecularFormula,MolecularWeight/JSON'
     test_basis = {'1': 445639}
     test_properties = ['MolecularFormula', 'MolecularWeight']
-    mock_response.json.return_value = {'IdentifierList': {'CID': [445639]}}
+    mock_response.json.return_value = {'PropertyTable': {'Properties': [{'CID': 445639,
+                    'MolecularFormula': 'C18H34O2',
+                    'MolecularWeight': '282.5'}]}}
     mock_run_queries.return_value = {'1': mock_response}
 
-    results = sim.find_similar_molecules(test_basis,
-                                         max_records=1,
-                                         threshold=99)
+    results = sim.get_molecule_properties(test_basis, test_properties)
 
     assert list(mock_run_queries.call_args.args[0].values()
                 )[0] == correct_url_0, 'URL passed to pubchem query malformed'
 
-    assert results['1'] == [445639], 'Error in parsing of pubchem reponses'
+    assert list(results['1'][0].keys())[0] == 'CID', 'Error in parsing of pubchem reponses'
