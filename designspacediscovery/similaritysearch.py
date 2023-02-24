@@ -77,3 +77,38 @@ def get_molecule_properties(molecules: dict, properties: list):
             property_dict[key] = value.json()['PropertyTable']['Properties']
 
     return property_dict
+
+def get_pubchem_vendor_status(molecules):
+    """
+    Determine if a molecule is purchaseable based on pubchem vendors being present
+    """
+    url_dict = {}
+    for key, cid in molecules.items():
+        url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/categories/compound/{cid}/JSON'
+        url_dict[key] = url
+
+    retriever = qpc.pubchemQuery()
+    vendor_responses = retriever.run_queries(url_dict)
+
+    vendor_status = {}
+
+    for key, value in vendor_responses.items():
+        if value == "FAILED":
+            vendor_status[key] = False
+        else:
+            vendors = None
+            # the response json is structured so that ['source cats']['cats'] is a list of dictionaries, one for each contributor category. Find the chemical vendor one, if it exists, and check how long it is  
+            for cat in value.json()['SourceCategories']['Categories']:
+                if cat['Category'] == "Chemical Vendors":
+                    vendors = cat
+                    break
+            if vendors is not None:
+                if len(vendors) > 0:
+                    vendor_status[key] = True
+                else:
+                    vendor_status[key] = False
+            else: 
+                vendor_status[key] = False
+                
+    return vendor_status
+                            
