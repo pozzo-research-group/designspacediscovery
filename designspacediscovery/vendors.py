@@ -5,26 +5,55 @@ Get the possible vendors for a chemical
 
 """
 import molbloom
+import designspacediscovery.similaritysearch as sim
+import designspacediscovery.utils as utils
 
-def is_purchaseable(smiles_dict, criteria):
+def is_purchaseable(molecules, criteria, smiles_dict = None):
     """
     Lookup for purchasbility of compounds
     
     Parameters:
     ----------
-    smiles (str) - dictionary with smiles strings as values
+    molecules - dictionary with cids as values
     criteria (bloom, pubchem, either, both) - which source or combo of sources to use
+    smiles_dict: optional, dictionary of smiles strings for the keys in molecules. Smiles strings required for bloom lookup. If bloom required and smiles_dict missing, will use pubchem to get smiles strings
     """
 
-    assert isinstance(smiles_dict, dict), "This function takes a dictionary of smiles strings as input"
-    assert isinstance(list(smiles_dict.values())[0], str), 'Dictionary keys should be smiles strings'
+    assert isinstance(molecules, dict), "This function takes a dictionary of smiles strings as input"
+    assert utils.is_integery(list(molecules.values())[0]), 'Dictionary keys should be smiles strings'
+    assert criteria in ['pubchem', 'bloom', 'either', 'both'], "Please select a criteria from 'pubchem', 'bloom', 'either', 'both'"
     
 
     if criteria in ['pubchem', 'either', 'both']:
         # run pubchem search
-        pubchem_results = pubchem_vendor_status(smiles_dict)
+        pubchem_results = sim.get_pubchem_vendor_status(molecules)
     
     if criteria in ['bloom', 'either', 'both']:
-        bloom_results = {k:molbloom.buy(v) for k, v in smiles_dict.items()}
+        # if user did not supply a dictionary of smiles strings, go get it for them
+        if smiles_dict is None:
+            smiles_dict = sim.get_molecule_properties(molecules, properties = ['CanonicalSMILES'])
+        else:
+            pass
+        bloom_results = {k:molbloom.buy(v['CanonicalSMILES']) for k, v in smiles_dict.items()}
+
+
+
+    if criteria == 'bloom':
+        purchaseable = bloom_results
+    elif criteria == 'pubchem':
+        purchaseable = pubchem_results
+    else:
+        purchaseable = {}
+        for key, cid in molecules.items():
+            if criteria == 'both':
+                purchaseable[key] = bloom_results[key] and pubchem_results[key]
+            elif criteria == 'either':
+                purchaseable[key] = bloom_results[key] or pubchem_results[key]
+        
+    return purchaseable
+
+
+
+    
 
         

@@ -52,6 +52,10 @@ def get_molecule_properties(molecules: dict, properties: list):
     properties: list of strings, properties to get from pubchem. Match pubchem property names, can be found here: 
     https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest#section=Compound-Property-Tables
 
+    Returns:
+    --------
+    properties: dict with structure {key:{'CID':cid, 'Property1:prop1value, ...}}
+
     """
     assert isinstance(
         molecules,
@@ -74,7 +78,7 @@ def get_molecule_properties(molecules: dict, properties: list):
         if value == 'FAILED':
             property_dict[key] = value
         else:
-            property_dict[key] = value.json()['PropertyTable']['Properties']
+            property_dict[key] = value.json()['PropertyTable']['Properties'][0]
 
     return property_dict
 
