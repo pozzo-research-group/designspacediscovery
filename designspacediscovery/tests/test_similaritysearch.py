@@ -56,4 +56,14 @@ def test_get_molecule_properties_validurlcall_parseresponse(
     assert list(mock_run_queries.call_args.args[0].values()
                 )[0] == correct_url_0, 'URL passed to pubchem query malformed'
 
-    assert list(results['1'][0].keys())[0] == 'CID', 'Error in parsing of pubchem reponses'
+    assert list(results['1'].keys())[0] == 'CID', 'Error in parsing of pubchem reponses'
+
+@patch.object(designspacediscovery.querypubchem.pubchemQuery, 'run_queries')
+@patch.object(requests.Response, 'json')
+def test_get_pubchem_vendor_status(mock_response, mock_run_queries):
+    test_basis = {'1':445639, '2':18397614, '3':42}
+
+
+
+
+    return None
