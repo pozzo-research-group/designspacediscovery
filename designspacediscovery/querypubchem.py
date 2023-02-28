@@ -4,6 +4,7 @@ import backoff
 import re
 import time
 from tqdm import tqdm
+import pickle
 """
 Functions for querying the pubchem pugrest API. 
 """
@@ -40,6 +41,8 @@ class pubchemQuery():
         --------
 
         responses: dict of {key:requests.Response objects or 'FAILED' if issue with request}
+
+        should add something to exit of more than n responses in a row
         """
 
         assert isinstance(
@@ -49,6 +52,8 @@ class pubchemQuery():
 
         response_dict = {}
         print('Querying Pubchem')
+        cache_count = 0
+        cache_num = 0
         for key in tqdm(list(URLs.keys())):
             URL = URLs[key]
             # make sure we are good on pubchem rate limits
@@ -60,6 +65,15 @@ class pubchemQuery():
                 # if the query wrapper has failed, its a lost cause
                 response = "FAILED"
             response_dict[key] = response
+            cache_count +=1
+
+            # quick and dirty caching
+            if cache_count > 1000:
+                cache_num += 1
+                with open(f'responsecache_props_{cache_num}.pkl', 'wb') as f:
+                    pickle.dump(response_dict, f)
+                cache_count = 0
+
         return response_dict
 
     @backoff.on_exception(

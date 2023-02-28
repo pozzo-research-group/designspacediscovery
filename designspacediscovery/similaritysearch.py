@@ -34,10 +34,15 @@ def find_similar_molecules(basis_set: dict,
 
     similarities = {}
     for key, value in similarity_responses.items():
+        print(key, value)
         if value == 'FAILED':
             similarities[key] = value
         else:
-            similarities[key] = value.json()['IdentifierList']['CID']
+            try:
+                similarities[key] = value.json()['IdentifierList']['CID']
+            except:
+                print('exception on', key, value)
+                similarities[key] = 'FAILED'
 
     return similarities
 
@@ -78,7 +83,11 @@ def get_molecule_properties(molecules: dict, properties: list):
         if value == 'FAILED':
             property_dict[key] = value
         else:
-            property_dict[key] = value.json()['PropertyTable']['Properties'][0]
+            try:
+                property_dict[key] = value.json()['PropertyTable']['Properties'][0]
+            except:
+                print('exception on ', key)
+                property_dict[key] = 'FAILED'
 
     return property_dict
 
