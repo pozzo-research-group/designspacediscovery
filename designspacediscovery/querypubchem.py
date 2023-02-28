@@ -5,6 +5,7 @@ import re
 import time
 from tqdm import tqdm
 import pickle
+import os
 """
 Functions for querying the pubchem pugrest API. 
 """
@@ -27,15 +28,16 @@ class pubchemQuery():
         self.count_status = 0
         self.time_status = 0
 
-    def run_queries(self, URLs: dict) -> dict:
+    def run_queries(self, URLs: dict, cache= True, cache_fp = '.', cache_name = 'cache') -> dict:
         """
-        For a set of pubchem urls, query pubchem and return the request results.
+        For a set of pubchem urls, query pubchem and return the request results. Work on non-batch queries
 
         Manages pubchem rate limits, retry, other API requesty things for you.
 
         Parameters:
         ----------
         URLS (dict): dict of {key:URL} pairs
+        cache (bool): whether or not to cache intermediate values 
         
         Returns:
         --------
@@ -49,6 +51,8 @@ class pubchemQuery():
             URLs, dict), 'This function takes a dictionary of URLS as input'
         assert isinstance(list(URLs.values())[0],
                           str), 'URL in URLs dictionary must be a string'
+        
+
 
         response_dict = {}
         print('Querying Pubchem')
@@ -58,22 +62,35 @@ class pubchemQuery():
             URL = URLs[key]
             # make sure we are good on pubchem rate limits
             self.__check_rate_status__()
+            fail_count = 0
             try:
                 response = self.__execute_query__(URL)
                 self.__parse_pubchem_header__(response)
             except:
                 # if the query wrapper has failed, its a lost cause
                 response = "FAILED"
+                fail_count += 1
+            
             response_dict[key] = response
             cache_count +=1
 
             # quick and dirty caching
-            if cache_count > 1000:
+            if cache_count > 10:
                 cache_num += 1
-                with open(f'responsecache_props_{cache_num}.pkl', 'wb') as f:
+                with open(f'{cache_fp}/{cache_name}_{cache_num}.pkl', 'wb') as f:
                     pickle.dump(response_dict, f)
+                try:
+                    os.remove(f'{cache_fp}/{cache_name}_{cache_num-1}.pkl')
+                except FileNotFoundError as e:
+                    pass
+
+                
                 cache_count = 0
 
+            # break out if there is something going funky
+            if fail_count > 10:
+                raise AssertionError('Check URLS or other inputs, 10 failed pubchem requests in a row. Stopping now'
+                                     )
         return response_dict
 
     @backoff.on_exception(

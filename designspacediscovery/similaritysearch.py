@@ -1,7 +1,8 @@
 # functions related to running 2d similarity search
 import designspacediscovery.querypubchem as qpc
 import designspacediscovery.utils as utils
-
+import requests
+import pickle
 
 def find_similar_molecules(basis_set: dict,
                            threshold=90,
@@ -91,9 +92,11 @@ def get_molecule_properties(molecules: dict, properties: list):
 
     return property_dict
 
-def get_pubchem_vendor_status(molecules):
+def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp':'.', 'cache_name':'vendor_cache'}):
     """
     Determine if a molecule is purchaseable based on pubchem vendors being present
+
+    Uses serial pubchem queries. Expect to wait. 
     """
     url_dict = {}
     for key, cid in molecules.items():
@@ -101,20 +104,34 @@ def get_pubchem_vendor_status(molecules):
         url_dict[key] = url
 
     retriever = qpc.pubchemQuery()
-    vendor_responses = retriever.run_queries(url_dict)
+    vendor_responses = retriever.run_queries(url_dict, cache = cache_params['cache'], cache_fp = cache_params['cache_fp'], cache_name = cache_params['cache_name'])
 
+
+    # cache the final result as a dict, this is a delicate fragile payload:
+    if cache_params['cache']:
+        with open(f'{cache_params["cache_fp"]}/{cache_params["cache_name"]}_final_vendors_responses.pkl', 'wb') as f:
+            pickle.dump(vendor_responses, f)
+    
     vendor_status = {}
 
     for key, value in vendor_responses.items():
         if value == "FAILED":
             vendor_status[key] = False
+        elif not isinstance(value, requests.models.Response):
+            vendor_status[key] = False
+        elif value.status_code !=200:
+            vendor_status[key] = False
         else:
             vendors = None
             # the response json is structured so that ['source cats']['cats'] is a list of dictionaries, one for each contributor category. Find the chemical vendor one, if it exists, and check how long it is  
-            for cat in value.json()['SourceCategories']['Categories']:
-                if cat['Category'] == "Chemical Vendors":
-                    vendors = cat
-                    break
+            try:
+                for cat in value.json()['SourceCategories']['Categories']:
+                    if cat['Category'] == "Chemical Vendors":
+                        vendors = cat
+                        break
+            except:
+                pass
+
             if vendors is not None:
                 if len(vendors) > 0:
                     vendor_status[key] = True
