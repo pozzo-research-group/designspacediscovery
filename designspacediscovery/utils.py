@@ -4,6 +4,8 @@ from rdkit.Chem import AllChem, Descriptors
 import tqdm
 import numpy as np
 import re
+import contextlib
+import sys
 
 def is_integery(val):
     """
@@ -39,12 +41,14 @@ def fp_list_from_smiles_list(smiles_list,n_bits=2048):
     Takes a list of smiles, returns a list of morgan fingerprints (rdkit). np.nan in list if failure.
     """
     fp_list = []
-    for smiles in tqdm.tqdm(smiles_list):
-        mol = Chem.MolFromSmiles(smiles)
-        if mol == None:                  #added this in to skip None as they returned sometimes in the line before
-            fp_list.append(np.nan)
-        else:
-            fp_list.append(fp_as_array(mol,n_bits))
+    for smiles in tqdm.tqdm(smiles_list, file = sys.stdout):
+        with nostdout():
+            #print('iterating')
+            mol = Chem.MolFromSmiles(smiles)
+            if mol == None:                  #added this in to skip None as they returned sometimes in the line before
+                fp_list.append(np.nan)
+            else:
+                fp_list.append(fp_as_array(mol,n_bits))
     return fp_list
 
 def fp_as_array(mol,n_bits=2048):
@@ -68,3 +72,31 @@ def load_pubchem_conversion(fp):
             if len(cid) > 0:
                 cid_dict[tci] = cid
     return cid_dict
+
+
+### context manager to stop rdkit writes from messing up progress bars
+
+@contextlib.contextmanager
+def nostdout():
+    save_stdout = sys.stdout
+    save_stderr = sys.stderr
+    sys.stdout = DummyFile(sys.stdout)
+    sys.stderr = DummyFile(sys.stdout)
+    try:
+        yield
+    finally:
+        sys.stdout = save_stdout
+        sys.stderr = save_stderr
+
+
+
+class DummyFile():
+    file = None
+    def __init__(self, file):
+        self.file = file
+
+    def write(self, x):
+        if len(x.rstrip()) > 0:
+            tqdm.tqdm.write(x, file = self.file)
+        
+

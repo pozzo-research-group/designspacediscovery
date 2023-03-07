@@ -4,6 +4,10 @@ import designspacediscovery.utils as utils
 import requests
 import pickle
 import warnings
+import sys
+import tqdm
+
+from rdkit import Chem
 
 def find_similar_molecules(basis_set: dict,
                            threshold=90,
@@ -141,3 +145,34 @@ def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp
                 
     return vendor_status
                             
+
+def substructure_search(pattern, smiles_dict):
+    """
+    Perform RDKit substructure search for pattern on smiles strings in smiles_dict
+
+    Parameters:
+    -----------
+    pattern(str): SMARTS string of pattern to look for 
+    smiles_dict (dict): dictionary with smiles strings as values
+
+    Returns:
+    --------
+    match_dict (dict): dictionary with same keys as smiles_dict, boolean values for matches or no
+    """
+
+
+    assert isinstance(pattern, str), 'Pattern needs to be a SMARTS string'
+
+    patmol = Chem.MolFromSmarts(pattern)
+
+    match_dict = {}
+    for key, smiles in tqdm.tqdm(smiles_dict.items(), file = sys.stdout):
+        with utils.nostdout():
+        # try to match the pattern in the string, give up if error.
+            try:
+                mol = Chem.MolFromSmiles(smiles)
+                match_dict[key] = mol.HasSubstructMatch(patmol)
+            except:
+                match_dict[key] = 'FAILED'
+    
+    return match_dict

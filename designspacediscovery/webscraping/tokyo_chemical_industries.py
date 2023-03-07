@@ -49,7 +49,7 @@ def scrape_tci_productids(url_base):
         #parse the product ids and cas nos
         more_pages = eval_more_pages(page)
         
-        time.sleep(1)
+        time.sleep(0.25)
 
         for match in match_strings:
             prod = parse_tci_productdiv(match)
@@ -88,7 +88,7 @@ def eval_more_pages(page):
     """
     see if more pages to review. True if so, F otherwise
     """
-    soup = BeautifulSoup(page)
+    soup = BeautifulSoup(page, features='lxml')
     pagenope = soup.find_all("li", class_='pagination-next disabled')
     
     if len(pagenope) > 0:

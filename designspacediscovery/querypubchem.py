@@ -7,6 +7,7 @@ from tqdm import tqdm
 import pickle
 import os
 import designspacediscovery.utils as ut
+import sys
 """
 Functions for querying the pubchem pugrest API. 
 """
@@ -59,7 +60,7 @@ class pubchemQuery():
         print('Querying Pubchem')
         cache_count = 0
         cache_num = 0
-        for key in tqdm(list(URLs.keys())):
+        for key in tqdm(list(URLs.keys()), file = sys.stdout, dynamic_ncols=True):
             URL = URLs[key]
             # make sure we are good on pubchem rate limits
             self.__check_rate_status__()
@@ -67,7 +68,10 @@ class pubchemQuery():
             try:
                 response = self.__execute_query__(URL)
                 self.__parse_pubchem_header__(response)
-            except:
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError,
+         requests.exceptions.ProxyError, requests.exceptions.Timeout,
+         requests.exceptions.ReadTimeout) as e:
+                tqdm.write(e)
                 # if the query wrapper has failed, its a lost cause
                 response = "FAILED"
                 fail_count += 1
@@ -76,9 +80,9 @@ class pubchemQuery():
             cache_count +=1
 
             # quick and dirty caching
-            if cache_count > 1000:
+            if cache_count > 10:
                 cache_num += 1
-                print(f'Pubchem api status: Count status: {self.count_status}, time status: {self.time_status}')
+                tqdm.write(f'Pubchem api status: Count status: {self.count_status}, time status: {self.time_status}')
                 with open(f'{cache_fp}/{cache_name}_{cache_num}.pkl', 'wb') as f:
                     pickle.dump(response_dict, f)
                 try:
