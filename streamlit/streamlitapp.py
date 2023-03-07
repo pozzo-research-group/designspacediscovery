@@ -3,7 +3,7 @@ import altair as alt
 import pandas as pd
 
 
-vendables = pd.read_csv('purchaseable_with_tsne.csv')
+vendables = pd.read_csv('streamlit/purchaseable_with_tsne.csv')
 
 chart = alt.Chart(vendables, width = 600, height = 500).mark_circle(size=100).encode(
     x = 'tsne_1',
