@@ -3,6 +3,7 @@ import designspacediscovery.querypubchem as qpc
 import designspacediscovery.utils as utils
 import requests
 import pickle
+import warnings
 
 def find_similar_molecules(basis_set: dict,
                            threshold=90,
@@ -35,7 +36,7 @@ def find_similar_molecules(basis_set: dict,
 
     similarities = {}
     for key, value in similarity_responses.items():
-        print(key, value)
+        #print(key, value)
         if value == 'FAILED':
             similarities[key] = value
         else:
@@ -48,13 +49,13 @@ def find_similar_molecules(basis_set: dict,
     return similarities
 
 
-def get_molecule_properties(molecules: dict, properties: list):
+def get_molecule_properties(molecules: list, properties: list):
     """
     Get the desired properties from pubchem for the molecules in molecules dictionary
 
     Parameters:
     -----------
-    molecules: dictionary, values are pubchem CIDs
+    molecules: list of pubchem CIDs
     properties: list of strings, properties to get from pubchem. Match pubchem property names, can be found here: 
     https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest#section=Compound-Property-Tables
 
@@ -64,33 +65,31 @@ def get_molecule_properties(molecules: dict, properties: list):
 
     """
     assert isinstance(
-        molecules,
-        dict), 'basis set must be a dictionary with Pubchem CIDs as values'
-    assert utils.is_integery(list(
-        molecules.values())[0]), 'Basis set values must be Pubchem CIDs'
+        molecules, list), 'basis set must be a list of pubchem cids'
+    assert utils.is_integery(molecules[0]), 'Basis set values must be Pubchem CIDs'
 
-    url_dict = {}
-    for key in list(molecules.keys()):
-        cid = molecules[key]
-        url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{cid}/property/{",".join(properties)}/JSON'
-        url_dict[key] = url
-
+    url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/property/{",".join(properties)}/JSON'
+  
     retriever = qpc.pubchemQuery()
-    property_responses = retriever.run_queries(url_dict)
+    property_responses = retriever.batch_queries(molecules, url)
 
-    property_dict = {}
+    properties_list = []
 
-    for key, value in property_responses.items():
-        if value == 'FAILED':
-            property_dict[key] = value
-        else:
+    for resp in property_responses:
+        if resp == "FAILED":
+            pass
+        elif not isinstance(resp, requests.models.Response):
+            warnings.warn('Encountered unexpected response value in properties responses: ', value)
+        elif resp.status_code !=200:
+            warnings.warn('Bad response code for response: ', resp.status_code)
+        else: 
             try:
-                property_dict[key] = value.json()['PropertyTable']['Properties'][0]
+                properties_list.extend(resp.json()['PropertyTable']['Properties'])
             except:
-                print('exception on ', key)
-                property_dict[key] = 'FAILED'
+                warnings.warn('Error parsing json from otherwise valid response')
+                print(resp.content)
 
-    return property_dict
+    return properties_list
 
 def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp':'.', 'cache_name':'vendor_cache'}):
     """
