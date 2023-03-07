@@ -24,4 +24,5 @@ chart['usermeta'] = {
 
 #st.set_page_config(layout = 'wide')
 st.title('t-SNE Embedding of Methacrylamide candidate monomers')
+st.write('Mouse over chart to explore, click to view pubchem page. Not tested on mobile')
 st.altair_chart(chart)
