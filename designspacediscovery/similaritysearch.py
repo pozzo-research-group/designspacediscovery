@@ -10,6 +10,7 @@ from typing import Union
 
 from rdkit import Chem
 
+
 def find_similar_molecules(basis_set: dict,
                            threshold=90,
                            max_records=5000,
@@ -69,18 +70,17 @@ def get_molecule_properties(molecules: Union[list, dict], properties: list):
     properties: dict with structure {key:{'CID':cid, 'Property1:prop1value, ...}}
 
     """
-    assert isinstance(
-        molecules, list) or isinstance(molecules, dict), 'basis set must be a list or dict of pubchem cids'
-    
-    if isinstance(molecules, dict): # convert to list for batch query
+    assert isinstance(molecules, list) or isinstance(
+        molecules, dict), 'basis set must be a list or dict of pubchem cids'
+
+    if isinstance(molecules, dict):  # convert to list for batch query
         molecules = [v for v in molecules.values()]
 
-    assert utils.is_integery(molecules[0]), 'Basis set values must be Pubchem CIDs'
-
-
+    assert utils.is_integery(
+        molecules[0]), 'Basis set values must be Pubchem CIDs'
 
     url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/property/{",".join(properties)}/JSON'
-  
+
     retriever = qpc.pubchemQuery()
     property_responses = retriever.batch_queries(molecules, url)
 
@@ -91,16 +91,23 @@ def get_molecule_properties(molecules: Union[list, dict], properties: list):
             pass
 
         try:
-            if resp.status_code !=200:
-                warnings.warn('Bad response code for response: '+str(resp))
-            else: 
-                properties_list.extend(resp.json()['PropertyTable']['Properties'])
+            if resp.status_code != 200:
+                warnings.warn('Bad response code for response: ' + str(resp))
+            else:
+                properties_list.extend(
+                    resp.json()['PropertyTable']['Properties'])
         except AttributeError:
-                warnings.warn('Invalid response object returned')
+            warnings.warn('Invalid response object returned')
 
     return properties_list
 
-def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp':'.', 'cache_name':'vendor_cache'}):
+
+def get_pubchem_vendor_status(molecules,
+                              cache_params={
+                                  'cache': True,
+                                  'cache_fp': '.',
+                                  'cache_name': 'vendor_cache'
+                              }):
     """
     Determine if a molecule is purchaseable based on pubchem vendors being present
 
@@ -112,29 +119,32 @@ def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp
         url_dict[key] = url
 
     retriever = qpc.pubchemQuery()
-    vendor_responses = retriever.run_queries(url_dict, cache_params= cache_params)
-
+    vendor_responses = retriever.run_queries(url_dict,
+                                             cache_params=cache_params)
 
     # cache the final result as a dict, this is a delicate fragile payload:
     if cache_params['cache']:
-        with open(f'{cache_params["cache_fp"]}/{cache_params["cache_name"]}_final_vendors_responses.pkl', 'wb') as f:
+        with open(
+                f'{cache_params["cache_fp"]}/{cache_params["cache_name"]}_final_vendors_responses.pkl',
+                'wb') as f:
             pickle.dump(vendor_responses, f)
-    
+
     vendor_status = {}
 
     for key, value in vendor_responses.items():
         if value == "FAILED":
             vendor_status[key] = False
-        
+
         else:
             try:
-                if value.status_code !=200:
+                if value.status_code != 200:
                     vendor_status[key] = False
                 else:
                     vendors = None
-                    # the response json is structured so that ['source cats']['cats'] is a list of dictionaries, one for each contributor category. Find the chemical vendor one, if it exists, and check how long it is  
+                    # the response json is structured so that ['source cats']['cats'] is a list of dictionaries, one for each contributor category. Find the chemical vendor one, if it exists, and check how long it is
                     try:
-                        for cat in value.json()['SourceCategories']['Categories']:
+                        for cat in value.json(
+                        )['SourceCategories']['Categories']:
                             if cat['Category'] == "Chemical Vendors":
                                 vendors = cat
                                 break
@@ -146,17 +156,15 @@ def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp
                             vendor_status[key] = True
                         else:
                             vendor_status[key] = False
-                    else: 
+                    else:
                         vendor_status[key] = False
 
             except AttributeError:
-                warnings.warn('Bad responses: '+str(value))
+                warnings.warn('Bad responses: ' + str(value))
                 vendor_status[key] = False
 
-
-                
     return vendor_status
-                            
+
 
 def substructure_search(pattern, smiles_dict):
     """
@@ -172,19 +180,18 @@ def substructure_search(pattern, smiles_dict):
     match_dict (dict): dictionary with same keys as smiles_dict, boolean values for matches or no
     """
 
-
     assert isinstance(pattern, str), 'Pattern needs to be a SMARTS string'
 
     patmol = Chem.MolFromSmarts(pattern)
 
     match_dict = {}
-    for key, smiles in tqdm.tqdm(smiles_dict.items(), file = sys.stdout):
+    for key, smiles in tqdm.tqdm(smiles_dict.items(), file=sys.stdout):
         with utils.nostdout():
-        # try to match the pattern in the string, give up if error.
+            # try to match the pattern in the string, give up if error.
             try:
                 mol = Chem.MolFromSmiles(smiles)
                 match_dict[key] = mol.HasSubstructMatch(patmol)
             except:
                 match_dict[key] = 'FAILED'
-    
+
     return match_dict

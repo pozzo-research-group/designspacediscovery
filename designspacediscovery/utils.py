@@ -7,6 +7,7 @@ import re
 import contextlib
 import sys
 
+
 def is_integery(val):
     """
     Figure out if something could be a pubchem id
@@ -24,7 +25,8 @@ def is_integery(val):
             return True
         else:
             return False
-        
+
+
 def chunked_iterable(iterable, size):
     """
     Yields a chunk of size 'size' from the iterable. 
@@ -36,29 +38,32 @@ def chunked_iterable(iterable, size):
             break
         yield chunk
 
-def fp_list_from_smiles_list(smiles_list,n_bits=2048):
+
+def fp_list_from_smiles_list(smiles_list, n_bits=2048):
     """
     Takes a list of smiles, returns a list of morgan fingerprints (rdkit). np.nan in list if failure.
     """
     fp_list = []
-    for smiles in tqdm.tqdm(smiles_list, file = sys.stdout):
+    for smiles in tqdm.tqdm(smiles_list, file=sys.stdout):
         with nostdout():
             #print('iterating')
             mol = Chem.MolFromSmiles(smiles)
-            if mol == None:                  #added this in to skip None as they returned sometimes in the line before
+            if mol == None:  #added this in to skip None as they returned sometimes in the line before
                 fp_list.append(np.nan)
             else:
-                fp_list.append(fp_as_array(mol,n_bits))
+                fp_list.append(fp_as_array(mol, n_bits))
     return fp_list
 
-def fp_as_array(mol,n_bits=2048):
+
+def fp_as_array(mol, n_bits=2048):
     """
     get morgan fingerprint as array with rdkit
     """
     fp = AllChem.GetMorganFingerprintAsBitVect(mol, 2, nBits=n_bits)
-    arr = np.zeros((1,), int)
+    arr = np.zeros((1, ), int)
     DataStructs.ConvertToNumpyArray(fp, arr)
     return arr
+
 
 def load_pubchem_conversion(fp):
     """
@@ -76,6 +81,7 @@ def load_pubchem_conversion(fp):
 
 ### context manager to stop rdkit writes from messing up progress bars
 
+
 @contextlib.contextmanager
 def nostdout():
     save_stdout = sys.stdout
@@ -89,14 +95,12 @@ def nostdout():
         sys.stderr = save_stderr
 
 
-
 class DummyFile():
     file = None
+
     def __init__(self, file):
         self.file = file
 
     def write(self, x):
         if len(x.rstrip()) > 0:
-            tqdm.tqdm.write(x, file = self.file)
-        
-
+            tqdm.tqdm.write(x, file=self.file)

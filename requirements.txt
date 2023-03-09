@@ -1,5 +1,6 @@
 # top level requirements
-
+toml
+yapf
 pytest
 requests
 backoff
