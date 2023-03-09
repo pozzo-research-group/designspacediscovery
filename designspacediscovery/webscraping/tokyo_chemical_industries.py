@@ -25,15 +25,15 @@ def scrape_tci_productids(url_base):
     """
     more_pages = True
     page_num = 0
-    
-    
+
     tci_ids = set()
     cas_nos = set()
-    
+
     while more_pages:
         print('Scraping page number ', page_num)
-        url = url_base+str(page_num) # tci indexes from 0
-        req = urllib.request.Request(url, headers={'User-Agent':"Magic Browser"})
+        url = url_base + str(page_num)  # tci indexes from 0
+        req = urllib.request.Request(url,
+                                     headers={'User-Agent': "Magic Browser"})
         resp = urllib.request.urlopen(req)
         bytespage = resp.read()
         page = bytespage.decode('UTF-8')
@@ -48,7 +48,7 @@ def scrape_tci_productids(url_base):
 
         #parse the product ids and cas nos
         more_pages = eval_more_pages(page)
-        
+
         time.sleep(0.25)
 
         for match in match_strings:
@@ -60,9 +60,9 @@ def scrape_tci_productids(url_base):
                 cas_nos.add(prod['cas_no'])
             except:
                 print('Error with extracting cas or prod no.')
-                
+
         page_num += 1
-        
+
     return tci_ids, cas_nos
 
 
@@ -81,8 +81,9 @@ def parse_tci_productdiv(div):
             parts = chunk.split('=')
             cas = parts[-1]
             cas = re.sub('[^a-zA-Z0-9-]', '', cas)
-            
-    return {'tci_id':pid, 'cas_no':cas}
+
+    return {'tci_id': pid, 'cas_no': cas}
+
 
 def eval_more_pages(page):
     """
@@ -90,7 +91,7 @@ def eval_more_pages(page):
     """
     soup = BeautifulSoup(page, features='lxml')
     pagenope = soup.find_all("li", class_='pagination-next disabled')
-    
+
     if len(pagenope) > 0:
         return False
     else:
