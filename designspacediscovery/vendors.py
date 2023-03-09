@@ -10,7 +10,7 @@ import designspacediscovery.utils as utils
 
 def is_purchaseable(molecules, criteria, smiles_dict = None):
     """
-    Lookup for purchasbility of compounds
+    Lookup for purchase-ability of compounds
     
     Parameters:
     ----------
@@ -31,10 +31,12 @@ def is_purchaseable(molecules, criteria, smiles_dict = None):
     if criteria in ['bloom', 'either', 'both']:
         # if user did not supply a dictionary of smiles strings, go get it for them
         if smiles_dict is None:
-            smiles_dict = sim.get_molecule_properties(molecules, properties = ['CanonicalSMILES'])
+            names = list(molecules.keys())
+            smiles_list = sim.get_molecule_properties(molecules, properties = ['CanonicalSMILES'])
+            assert len(smiles_list) == len(names), 'List of returned smiles is different than number of molecules'
         else:
             pass
-        bloom_results = {k:molbloom.buy(v['CanonicalSMILES']) for k, v in smiles_dict.items()}
+        bloom_results = {name:molbloom.buy(v['CanonicalSMILES']) for name, v in zip(names, smiles_list)}
 
 
 

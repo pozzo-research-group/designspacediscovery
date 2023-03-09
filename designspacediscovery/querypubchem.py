@@ -30,7 +30,7 @@ class pubchemQuery():
         self.count_status = 0
         self.time_status = 0
 
-    def run_queries(self, URLs: dict, cache= True, cache_fp = '.', cache_name = 'cache') -> dict:
+    def run_queries(self, URLs: dict, cache_params={'cache':False, 'cache_fp':'.', 'cache_name':'cache'}) -> dict:
         """
         For a set of pubchem urls, query pubchem and return the request results. Work on non-batch queries
 
@@ -55,6 +55,10 @@ class pubchemQuery():
                           str), 'URL in URLs dictionary must be a string'
         
 
+        cache = cache_params['cache']
+        cache_fp = cache_params['cache_fp']
+        cache_name = cache_params['cache_name']
+
 
         response_dict = {}
         print('Querying Pubchem')
@@ -71,7 +75,7 @@ class pubchemQuery():
             except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError,
          requests.exceptions.ProxyError, requests.exceptions.Timeout,
          requests.exceptions.ReadTimeout) as e:
-                tqdm.write(e)
+                tqdm.write(str(e))
                 # if the query wrapper has failed, its a lost cause
                 response = "FAILED"
                 fail_count += 1
@@ -80,15 +84,16 @@ class pubchemQuery():
             cache_count +=1
 
             # quick and dirty caching
-            if cache_count > 10:
-                cache_num += 1
-                tqdm.write(f'Pubchem api status: Count status: {self.count_status}, time status: {self.time_status}')
-                with open(f'{cache_fp}/{cache_name}_{cache_num}.pkl', 'wb') as f:
-                    pickle.dump(response_dict, f)
-                try:
-                    os.remove(f'{cache_fp}/{cache_name}_{cache_num-1}.pkl')
-                except FileNotFoundError as e:
-                    pass
+            if cache:
+                if cache_count > 10:
+                    cache_num += 1
+                    tqdm.write(f'Pubchem api status: Count status: {self.count_status}, time status: {self.time_status}')
+                    with open(f'{cache_fp}/{cache_name}_{cache_num}.pkl', 'wb') as f:
+                        pickle.dump(response_dict, f)
+                    try:
+                        os.remove(f'{cache_fp}/{cache_name}_{cache_num-1}.pkl')
+                    except FileNotFoundError as e:
+                        pass
 
                 
                 cache_count = 0

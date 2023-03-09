@@ -6,6 +6,7 @@ import pickle
 import warnings
 import sys
 import tqdm
+from typing import Union
 
 from rdkit import Chem
 
@@ -53,7 +54,7 @@ def find_similar_molecules(basis_set: dict,
     return similarities
 
 
-def get_molecule_properties(molecules: list, properties: list):
+def get_molecule_properties(molecules: Union[list, dict], properties: list):
     """
     Get the desired properties from pubchem for the molecules in molecules dictionary
 
@@ -69,8 +70,14 @@ def get_molecule_properties(molecules: list, properties: list):
 
     """
     assert isinstance(
-        molecules, list), 'basis set must be a list of pubchem cids'
+        molecules, list) or isinstance(molecules, dict), 'basis set must be a list or dict of pubchem cids'
+    
+    if isinstance(molecules, dict): # convert to list for batch query
+        molecules = [v for v in molecules.values()]
+
     assert utils.is_integery(molecules[0]), 'Basis set values must be Pubchem CIDs'
+
+
 
     url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/property/{",".join(properties)}/JSON'
   
@@ -82,16 +89,14 @@ def get_molecule_properties(molecules: list, properties: list):
     for resp in property_responses:
         if resp == "FAILED":
             pass
-        elif not isinstance(resp, requests.models.Response):
-            warnings.warn('Encountered unexpected response value in properties responses: ', value)
-        elif resp.status_code !=200:
-            warnings.warn('Bad response code for response: ', resp.status_code)
-        else: 
-            try:
+
+        try:
+            if resp.status_code !=200:
+                warnings.warn('Bad response code for response: '+str(resp))
+            else: 
                 properties_list.extend(resp.json()['PropertyTable']['Properties'])
-            except:
-                warnings.warn('Error parsing json from otherwise valid response')
-                print(resp.content)
+        except AttributeError:
+                warnings.warn('Invalid response object returned')
 
     return properties_list
 
@@ -107,7 +112,7 @@ def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp
         url_dict[key] = url
 
     retriever = qpc.pubchemQuery()
-    vendor_responses = retriever.run_queries(url_dict, cache = cache_params['cache'], cache_fp = cache_params['cache_fp'], cache_name = cache_params['cache_name'])
+    vendor_responses = retriever.run_queries(url_dict, cache_params= cache_params)
 
 
     # cache the final result as a dict, this is a delicate fragile payload:
@@ -120,28 +125,35 @@ def get_pubchem_vendor_status(molecules, cache_params = {'cache':True, 'cache_fp
     for key, value in vendor_responses.items():
         if value == "FAILED":
             vendor_status[key] = False
-        elif not isinstance(value, requests.models.Response):
-            vendor_status[key] = False
-        elif value.status_code !=200:
-            vendor_status[key] = False
+        
         else:
-            vendors = None
-            # the response json is structured so that ['source cats']['cats'] is a list of dictionaries, one for each contributor category. Find the chemical vendor one, if it exists, and check how long it is  
             try:
-                for cat in value.json()['SourceCategories']['Categories']:
-                    if cat['Category'] == "Chemical Vendors":
-                        vendors = cat
-                        break
-            except:
-                pass
-
-            if vendors is not None:
-                if len(vendors) > 0:
-                    vendor_status[key] = True
-                else:
+                if value.status_code !=200:
                     vendor_status[key] = False
-            else: 
+                else:
+                    vendors = None
+                    # the response json is structured so that ['source cats']['cats'] is a list of dictionaries, one for each contributor category. Find the chemical vendor one, if it exists, and check how long it is  
+                    try:
+                        for cat in value.json()['SourceCategories']['Categories']:
+                            if cat['Category'] == "Chemical Vendors":
+                                vendors = cat
+                                break
+                    except:
+                        pass
+
+                    if vendors is not None:
+                        if len(vendors) > 0:
+                            vendor_status[key] = True
+                        else:
+                            vendor_status[key] = False
+                    else: 
+                        vendor_status[key] = False
+
+            except AttributeError:
+                warnings.warn('Bad responses: '+str(value))
                 vendor_status[key] = False
+
+
                 
     return vendor_status
                             

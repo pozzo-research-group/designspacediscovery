@@ -32,6 +32,7 @@ class Test_pubchemQuery:
 
         # 1. Test that request counts are incremented correctly
     @patch('designspacediscovery.querypubchem.requests.get')
+    #@patch('designspacediscovery.querypubchem.time.sleep') # patch out time so tests run faster 
     def test_run_queries(self, mock_get):
         pcquery = qpc.pubchemQuery()
         url = 'abcd'
