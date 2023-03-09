@@ -131,3 +131,13 @@ def test_get_pubchem_vendor_status_false(mock_response, mock_run_queries):
     assert results['1'] == False, 'Incorrectly parsed pubchem vendor response for false example'
 
     return None
+
+def test_substructure_search():
+    acrylate_smarts = '[#6&D1]=[#6&D2]-[#6](=[#8])-[#8]'
+
+    test_smiles = {'yes':'C=CC[Si](CCCOC(=O)C=C)(CC=C)CC=C', 'no':'CC(C)CC1=CC=C(C=C1)C(C)C(=O)O'}
+
+    match_dict = sim.substructure_search(acrylate_smarts, test_smiles)
+
+    assert match_dict['yes'] == True, 'match not found'
+    assert match_dict['no'] == False, 'Not match flagged as match'
