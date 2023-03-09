@@ -5,3 +5,4 @@ requests
 backoff
 tqdm
 molbloom
+rdkit
