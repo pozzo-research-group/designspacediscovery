@@ -7,7 +7,8 @@ import warnings
 import sys
 import tqdm
 from typing import Union
-
+import re
+import numpy as np
 from rdkit import Chem
 
 
@@ -195,3 +196,169 @@ def substructure_search(pattern, smiles_dict):
                 match_dict[key] = 'FAILED'
 
     return match_dict
+
+
+def get_ghs_hazardcodes(molecules, cache_params={
+                                    'cache': True,
+                                    'cache_fp': '.',
+                                    'cache_name': 'GHS_cache'
+                                    }):
+    """
+    Get GHS Hazard codes from Pubchem.
+
+    uses the pug-view api - expect this to be slow
+    """
+    assert isinstance(molecules, dict), 'This function takes a dictionary of CIDs'
+    assert utils.is_integery(list(molecules.values())[0]), 'This function works on CIDS'
+
+    url_dict = {}
+    for key, cid in molecules.items():
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=GHS+Classification"
+        url_dict[key] = url
+
+    retriever = qpc.pubchemQuery()
+    hazard_responses = retriever.run_queries(url_dict,
+                                             cache_params=cache_params)
+
+    # cache the final result as a dict, this is a delicate fragile payload:
+    if cache_params['cache']:
+        with open(
+                f'{cache_params["cache_fp"]}/{cache_params["cache_name"]}_final_vendors_responses.pkl',
+                'wb') as f:
+            pickle.dump(hazard_responses, f)
+
+    ## Process response objects
+    hazard_code_dict = {}
+
+    for key, response in hazard_responses.items():
+        try:
+            # pull out the hazard statements dictionaries from the response json. There might be more than 1
+            subsections = response.json()['Record']['Section'][0]['Section'][0]['Section'][0]['Information']
+        except KeyError:
+            hazard_code_dict[key] = 'FAILED'
+            print(response.status_code)
+        else:
+            try:
+                hazard_sects = []
+                for subsect in subsections:
+                    if subsect['Name'] == "GHS Hazard Statements":
+                        hazard_sects.append(subsect)
+                        
+                # get the hazard statements out of the dictionaries that contain them
+                statements = []
+                if len(hazard_sects) > 0:
+                    for sect in hazard_sects:
+                        [statements.append(entry['String']) for entry in sect['Value']['StringWithMarkup']]
+                    
+                # get the GHS hazard code from the string that contains the code as well as the description
+                codes = set()
+                for state in statements:
+                    codes.add(re.sub('[^a-zA-Z0-9]', '', state.split(' ')[0]))
+
+                hazard_code_dict[key] = codes
+
+            except KeyError:
+                hazard_code_dict[key] = 'NEW_JSON_FORMAT'
+
+    return hazard_code_dict
+
+
+def get_melting_point(molecules, cache_params={
+                                    'cache': True,
+                                    'cache_fp': '.',
+                                    'cache_name': 'MP_cache'
+                                    }):
+    """
+    Get experimental melting point
+
+    uses the pug-view api - expect this to be slow
+    """
+    assert isinstance(molecules, dict), 'This function takes a dictionary of CIDs'
+    assert utils.is_integery(list(molecules.values())[0]), 'This function works on CIDS'
+
+    url_dict = {}
+    for key, cid in molecules.items():
+        url = f"https://pubchem.ncbi.nlm.nih.gov/rest/pug_view/data/compound/{cid}/JSON?heading=Melting+Point"
+        url_dict[key] = url
+
+    retriever = qpc.pubchemQuery()
+    hazard_responses = retriever.run_queries(url_dict,
+                                             cache_params=cache_params)
+
+    # cache the final result as a dict, this is a delicate fragile payload:
+    if cache_params['cache']:
+        with open(
+                f'{cache_params["cache_fp"]}/{cache_params["cache_name"]}_final_vendors_responses.pkl',
+                'wb') as f:
+            pickle.dump(hazard_responses, f)
+
+    ## Process response objects
+    meltpoint_dict = {}
+    for key, response in hazard_responses.items():
+        if response.status_code != 200:
+            meltpoint_dict[key] = np.nan
+        else:
+            data = response.json()
+
+            found_data = False
+            for entry in data['Record']['Section']:
+                if entry['TOCHeading'] == 'Chemical and Physical Properties':
+                    sections = entry['Section']
+                    for section in sections:
+                        if section['TOCHeading'] == 'Experimental Properties':
+                            expprops = section['Section']
+                            for prop in expprops:
+                                if prop['TOCHeading'] == 'Melting Point':
+                                    temp_data = prop['Information']
+                                    found_data = True
+            if not found_data:
+                meltpoint_dict[key] = np.nan
+            else:
+                temp_list = []
+                # go over every entry for this compound and get the temperature value, hoepfully in C
+                for entry in temp_data:
+                    string_value = entry['Value']['StringWithMarkup'][0]['String']
+                    try:
+                        T = process_string_tempvalue(string_value)
+                        temp_list.append(T)
+                    except Exception as e:
+                        print('Issue for CID {key}: ', e)
+
+                    temp_arr = np.array(temp_list)
+                # drop nans
+                temp_arr = temp_arr[~np.isnan(temp_arr)]
+
+                Tavg = np.mean(temp_arr)
+            
+                meltpoint_dict[key] = Tavg
+    
+    return meltpoint_dict
+
+def fahrenheit2Celsius(temp):
+    return (temp-32)*(5/9)
+
+def process_string_tempvalue(string):
+    split = string.split(' ')
+    temp = split[0]
+    
+    if '-' in temp: # assuming this means that a range is given, take the average
+        temps = temp.split('-')
+        try:
+            temps = [int(T) for T in temps]
+        except:
+            return np.nan 
+        temp = np.mean(temps)
+        
+
+    try:
+        temp = int(temp)
+    except:
+        return np.nan
+    
+    # check if this is in Fahrenheit
+    for token in split[1:]:
+        if 'F' in token:
+            temp = fahrenheit2Celsius(temp)
+            break
+    
+    return temp
