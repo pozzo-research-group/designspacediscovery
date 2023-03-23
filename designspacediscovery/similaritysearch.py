@@ -317,41 +317,54 @@ def get_melting_point(molecules, cache_params={
                 temp_list = []
                 # go over every entry for this compound and get the temperature value, hoepfully in C
                 for entry in temp_data:
-                    string_value = entry['Value']['StringWithMarkup'][0]['String']
                     try:
+                        string_value = entry['Value']['StringWithMarkup'][0]['String']
                         T = process_string_tempvalue(string_value)
                         temp_list.append(T)
-                    except Exception as e:
-                        print('Issue for CID {key}: ', e)
+                    except KeyError:
+                        T = entry['Value']['Number'][0]
+                        try:
+                            unit = entry['Value']['Unit']
+                            if unit[-1] == 'F':
+                                temp = fahrenheit2Celsius(T)
+                        except:
+                            pass
+                        temp_list.append(T)
 
                     temp_arr = np.array(temp_list)
                 # drop nans
                 temp_arr = temp_arr[~np.isnan(temp_arr)]
 
                 Tavg = np.mean(temp_arr)
-            
                 meltpoint_dict[key] = Tavg
-    
     return meltpoint_dict
 
 def fahrenheit2Celsius(temp):
     return (temp-32)*(5/9)
 
 def process_string_tempvalue(string):
+    """
+    Jankiness here is from experimenting with pubchem responses and adding parsing for the most common formats. Don't try to beautify without knowing what you're fixing. Remaining misses would probably be best parsed with a LLM
+    """
+    string = re.sub('[^a-zA-Z0-9\-\<\>]', ' ', string)
     split = string.split(' ')
-    temp = split[0]
+    if split[0] in ['<', '>']:
+        temp = split[1]
+    else:
+        temp = split[0]
+
     
-    if '-' in temp: # assuming this means that a range is given, take the average
+    if '-' in temp[1:]: # assuming this means that a range is given, take the average
         temps = temp.split('-')
         try:
-            temps = [int(T) for T in temps]
+            temps = [float(T) for T in temps]
         except:
             return np.nan 
         temp = np.mean(temps)
         
 
     try:
-        temp = int(temp)
+        temp = float(temp)
     except:
         return np.nan
     

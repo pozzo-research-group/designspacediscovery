@@ -65,7 +65,7 @@ class pubchemQuery():
         cache = cache_params['cache']
         cache_fp = cache_params['cache_fp']
         cache_name = cache_params['cache_name']
-
+        print('cache status :', cache)
         response_dict = {}
         print('Querying Pubchem')
         cache_count = 0
@@ -94,7 +94,7 @@ class pubchemQuery():
 
             # quick and dirty caching
             if cache:
-                if cache_count > 10:
+                if cache_count > 1000:
                     cache_num += 1
                     tqdm.write(
                         f'Pubchem api status: Count status: {self.count_status}, time status: {self.time_status}'
@@ -104,10 +104,10 @@ class pubchemQuery():
                         pickle.dump(response_dict, f)
                     try:
                         os.remove(f'{cache_fp}/{cache_name}_{cache_num-1}.pkl')
-                    except FileNotFoundError as e:
+                    except FileNotFoundError as e: # catch first round where previous file does not exist
                         pass
 
-                cache_count = 0
+                    cache_count = 0
 
             # break out if there is something going funky
             if fail_count > 10:
@@ -225,10 +225,13 @@ class pubchemQuery():
         return
 
     def __parse_pubchem_header__(self, response):
-        header = response.headers['X-Throttling-Control']
-        splits = re.split('[()]', header)
-        self.count_status = int(splits[1][:-1])
-        self.time_status = int(splits[3][:-1])
+        try:
+            header = response.headers['X-Throttling-Control']
+            splits = re.split('[()]', header)
+            self.count_status = int(splits[1][:-1])
+            self.time_status = int(splits[3][:-1])
+        except:
+            pass
         return
 
     def __minute_rate_ok__(self) -> bool:
