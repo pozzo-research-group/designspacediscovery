@@ -135,7 +135,7 @@ class pubchemQuery():
                           list), 'This function takes a list of cids as input'
         assert isinstance(url, str), 'URL in URLs dictionary must be a string'
 
-        print('Querying Pubchem')
+        #print('Querying Pubchem')
         response_list = []
         chunk_num = 0
         for chunk in ut.chunked_iterable(cid_list, max_batch_size):
@@ -160,6 +160,7 @@ class pubchemQuery():
             chunk_num += 1
             time.sleep(0.5)
         print(f'Batch query 100% complete', end='\r')
+        print(f'Pubchem api status: Count status: {self.count_status}, time status: {self.time_status}')
 
         return response_list
 

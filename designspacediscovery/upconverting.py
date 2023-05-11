@@ -90,6 +90,7 @@ def count_nmember_ring(mol, ri, n = 6, require_aromatic = False):
             if require_aromatic:
                 if isRingAromatic(mol, bonds):
                     count+=1
+    return count
 
 
 def GetRingSystems(mol, includeSpiro=False):
@@ -158,7 +159,10 @@ def check_conjugated_bridging(mol, ring_systems, threshold = 1):
     paths = []
     # get the shortest path between each pair of atoms
     for atom_1, atom_2 in itertools.combinations(key_atoms, 2):
-        path = Chem.rdmolops.GetShortestPath(mol, int(atom_1), int(atom_2))
+        try:
+            path = Chem.rdmolops.GetShortestPath(mol, int(atom_1), int(atom_2))
+        except RuntimeError:
+            return False
         paths.append(path)
         #except:
             #fail molecule
@@ -211,10 +215,11 @@ def check_conjugated_bridging(mol, ring_systems, threshold = 1):
         else:
             for atom in nonloop_atoms:
                 atombonds = atom.GetBonds()
-                # if a nonring atom is boron, just add its bonds to the conjugated set due to our definitions
-                if atom.GetAtomicNum() == 5:
+                # if a nonring atom is boron or phosphorous, just add its bonds to the conjugated set due to our definitions
+                if atom.GetAtomicNum() in [5, 15]:
                     for bond in atombonds:
                         conjugation_status.append(True)
+
                 # if not boron proceed as usual
                 else:
                     for bond in atombonds:
