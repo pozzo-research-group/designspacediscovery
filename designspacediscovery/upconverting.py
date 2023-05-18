@@ -1,5 +1,6 @@
 from rdkit import Chem
 from rdkit.Chem import AllChem
+from rdkit.Chem import Fragments
 import time
 import numpy as np
 import itertools
@@ -245,3 +246,65 @@ def check_conjugated_bridging(mol, ring_systems, threshold = 1):
 
     return status
         
+def screen_molecule(entry):
+    """
+    Implements the screening criteria for this project into one function call.
+
+    Expects a dictionary with a 'MolecularWeight' and 'CanonicalSMILES' key.
+
+    Returns a boolean
+    """
+    
+    try:
+        molwt = entry['MolecularWeight']
+        molwt = float(molwt)
+    except KeyError:
+        return False
+    
+    if molwt > 300:
+        return False
+    try:
+        smiles = entry['CanonicalSMILES']
+    except KeyError:
+        return False
+        
+    try:
+        mol = Chem.MolFromSmiles(smiles)
+    except:
+        return False
+    
+    if mol is None:
+        return False
+        
+    
+    #carboxy
+    n_carboxyl = Chem.Fragments.fr_C_O(mol)
+    n_sulfyrlthingies = Chem.Fragments.fr_C_S(mol)
+    if n_carboxyl > 0 or n_sulfyrlthingies > 0:
+        return False
+    elif mol.HasSubstructMatch(Chem.MolFromSmarts('[cX3]=[OX1]')):
+        return False
+
+    
+    # atom membership
+    if not screen_allowable_atoms(mol):
+        return False
+    
+    #conjugated bridging
+    ring_sys = GetRingSystems(mol, includeSpiro=True)
+    if len(ring_sys) > 1:
+        conjbridge = check_conjugated_bridging(mol, ring_sys)
+        if not conjbridge:
+            return False
+    else:
+        pass
+    
+    # number of aromatic rings
+    ri = mol.GetRingInfo()
+    count_5 = count_nmember_ring(mol, ri, n = 5, require_aromatic=True)
+    count_6 = count_nmember_ring(mol, ri, n = 6, require_aromatic = True)
+    
+    if (count_5 + count_6) < 2:
+        return False
+    
+    return True
