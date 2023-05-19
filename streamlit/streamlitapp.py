@@ -18,6 +18,6 @@ chart['usermeta'] = {
 }
 
 #st.set_page_config(layout = 'wide')
-st.title('t-SNE Embedding of 2,3,3-Trimethely Indolenine similar candidates')
+st.title('t-SNE Embedding of some synthesizeable molecules from pubchem screening')
 st.write('Mouse over chart to explore, click to view Pubchem page for molecule. Not recommended for mobile')
 st.altair_chart(chart)
