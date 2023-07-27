@@ -3,7 +3,7 @@ import altair as alt
 import pandas as pd
 
 
-vendables = pd.read_csv('streamlit/synthesizeable_altairsample.csv')
+vendables = pd.read_csv('streamlit/safetypassed_altair.csv')
 
 chart = alt.Chart(vendables, width = 600, height = 500).mark_circle(size=100).encode(
     x = 'tsne_1',
@@ -18,6 +18,6 @@ chart['usermeta'] = {
 }
 
 #st.set_page_config(layout = 'wide')
-st.title('t-SNE Embedding of some synthesizeable molecules from pubchem screening')
+st.title('t-SNE Embedding of molecules that pass safety and structural screening')
 st.write('Mouse over chart to explore, click to view Pubchem page for molecule. Not recommended for mobile')
 st.altair_chart(chart)
