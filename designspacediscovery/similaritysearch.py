@@ -56,7 +56,7 @@ def find_similar_molecules(basis_set: dict,
     return similarities
 
 
-def get_molecule_properties(molecules: Union[list, dict], properties: list):
+def get_molecule_properties(molecules: Union[list, dict], properties: list, batch_size = 10000):
     """
     Get the desired properties from pubchem for the molecules in molecules dictionary
 
@@ -83,7 +83,7 @@ def get_molecule_properties(molecules: Union[list, dict], properties: list):
     url = f'https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/property/{",".join(properties)}/JSON'
 
     retriever = qpc.pubchemQuery()
-    property_responses = retriever.batch_queries(molecules, url)
+    property_responses = retriever.batch_queries(molecules, url, max_batch_size = batch_size)
 
     properties_list = []
 

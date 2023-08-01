@@ -12,7 +12,7 @@ def is_integery(val):
     """
     Figure out if something could be a pubchem id
     """
-    if (not isinstance(val, str)) and (not isinstance(val, int)):
+    if (not isinstance(val, str)) and (not (isinstance(val, int) or isinstance(val, np.int64))):
         return False
     else:
         if isinstance(val, str):
@@ -21,7 +21,7 @@ def is_integery(val):
                 return True
             except:
                 return False
-        elif isinstance(val, int):
+        elif isinstance(val, int) or isinstance(val, np.int64):
             return True
         else:
             return False
