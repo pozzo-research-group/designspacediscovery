@@ -2,7 +2,7 @@ import streamlit as st
 import altair as alt
 import pandas as pd
 
-vendables = pd.read_csv('DES_redox_components_altairdata.csv')
+vendables = pd.read_csv('streamlit/DES_redox_components_altairdata.csv')
 
 #vendables['image'] = vendables['CID'].apply(lambda x: f'http://localhost:8501/app/static/altair_images/{x}.png')
 
